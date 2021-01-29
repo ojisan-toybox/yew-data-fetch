@@ -1,96 +1,133 @@
-use wasm_bindgen::prelude::*;
-use yew::{format::{Json, Nothing}, prelude::*, services::{FetchService, fetch::{Request, Response}}};
 use serde::Deserialize;
+use wasm_bindgen::prelude::*;
+use yew::{
+    format::{Json, Nothing},
+    prelude::*,
+    services::fetch::{FetchService, FetchTask, Request, Response},
+};
 
-struct Model {
-    link: ComponentLink<Self>,
-    data: Option<ResponseData>,
-    loading: bool,
-    error: Option<String>
+#[derive(Clone, Debug, Eq, PartialEq, Properties)]
+pub struct Props {
+    pub id: String,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct Item {
+    itemName: String,
+    itemPrice: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct ResponseData {
-    by : String,
-    descendants : i32,
-    id : i32,
-    kids : Vec<i32>,
-    score : i32,
-    time : i32,
-    title : String,
-    type: String,
-    url : String
+    data: Vec<Item>,
+    sum: i32
 }
 
-
-enum Msg {
-    StartFetchData,
+#[derive(Debug)]
+pub enum Msg {
     SuccessFetchData(Result<ResponseData, anyhow::Error>),
-    FailFetchData(String)
 }
 
+#[derive(Debug)]
+pub struct Model {
+    fetch_task: Option<FetchTask>,
+    data: Option<ResponseData>,
+    link: ComponentLink<Self>,
+    error: Option<String>,
+}
 
+impl Model {
+    fn success(&self) -> Html {
+        match self.data {
+            Some(ref res) => {
+                html! {
+                    <>
+                            {for res.data.iter().map(|e| self.renderItem(e)) }
+                            <p class="sum">{"小計: "}{res.sum}<span>{"円"}</span></p>
+                    </>
+                }
+            }
+            None => {
+                html! {
+                     <></>
+                }
+            }
+        }
+    }
+    fn fetching(&self) -> Html {
+        if self.fetch_task.is_some() {
+            html! { <p>{ "Fetching data..." }</p> }
+        } else {
+            html! { <p></p> }
+        }
+    }
+    fn error(&self) -> Html {
+        if let Some(ref error) = self.error {
+            html! { <p>{ error.clone() }</p> }
+        } else {
+            html! {}
+        }
+    }
 
+    fn renderItem(&self, item: &Item) -> Html {
+        html! {
+            <a class="item" href=format!("https://www.mercari.com/jp/search/?keyword={}", &item.itemName) target="_blank">
+                  <div class="left">{ &item.itemName }</div>
+                   <div class="right">{ &item.itemPrice }</div>
+            </a>
+        }
+    }
+}
 impl Component for Model {
     type Message = Msg;
     type Properties = ();
-    fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
-        link.callback(|_| Msg::StartFetchData);
 
-        let endpoint = "https://hacker-news.firebaseio.com/v0/item/8863.json?print=pretty";
-        let request = Request::get(endpoint)
+    fn create(_props: Self::Properties, link: ComponentLink<Self>) -> Self {
+        let request = Request::get(
+            "https://receipten-backend.ojisan.vercel.app/api/get-items?id=JtvoNq7CnSUU6HvB1QPK",
+        )
         .body(Nothing)
         .expect("Could not build request.");
-
+        // 2. construct a callback
         let callback = link.callback(
             |response: Response<Json<Result<ResponseData, anyhow::Error>>>| {
                 let Json(data) = response.into_body();
-                match data {
-                    ResponseData => {
-                        link.callback(()=> Msg::SuccessFetchData(data));
-                    }
-                    anyhow::Error => Msg::FailFetchData("error")
-                }
+                Msg::SuccessFetchData(data)
             },
         );
         let task = FetchService::fetch(request, callback).expect("failed to start request");
         Self {
+            fetch_task: Some(task),
+            data: None,
             link,
-            data: Some(),
-            loading: false,
-            error: Some(String)
+            error: None,
         }
     }
+    fn change(&mut self, _props: Self::Properties) -> bool {
+        false
+    }
+    fn update(&mut self, msg: Self::Message) -> bool {
+        use Msg::*;
 
-    fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
-            Msg::SuccessFetchData(response) => {
+            SuccessFetchData(response) => {
                 match response {
                     Ok(data) => {
-                        self.loading = false;
                         self.data = Some(data);
                     }
-                    Err(error) => {
-                        self.loading = false;
-                        self.error = Some(error.to_string());
-                    },
+                    Err(error) => self.error = Some(error.to_string()),
                 }
                 self.fetch_task = None;
                 true
             }
         }
-        true
     }
-
-    fn change(&mut self, _props: Self::Properties) -> ShouldRender {
-        false
-    }
-
     fn view(&self) -> Html {
         html! {
-            <div>
-                <button onclick=self.link.callback(|_| Msg::AddOne)>{ "+1" }</button>
-                <p>{ self.value }</p>
+            <div class="container">
+            <h1><span>{"おのうえ商店"}</span></h1>
+                { self.fetching() }
+                { self.success() }
             </div>
         }
     }

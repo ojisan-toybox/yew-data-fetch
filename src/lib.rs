@@ -13,8 +13,8 @@ pub struct Props {
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct Item {
-    itemName: String,
-    itemPrice: String,
+    item_name: String,
+    item_price: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -71,9 +71,9 @@ impl Model {
 
     fn renderItem(&self, item: &Item) -> Html {
         html! {
-            <a class="item" href=format!("https://www.mercari.com/jp/search/?keyword={}", &item.itemName) target="_blank">
-                  <div class="left">{ &item.itemName }</div>
-                   <div class="right">{ &item.itemPrice }</div>
+            <a class="item" href=format!("https://www.mercari.com/jp/search/?keyword={}", &item.item_name) target="_blank">
+                  <div class="left">{ &item.item_name }</div>
+                   <div class="right">{ &item.item_price }</div>
             </a>
         }
     }
@@ -125,7 +125,6 @@ impl Component for Model {
     fn view(&self) -> Html {
         html! {
             <div class="container">
-            <h1><span>{"おのうえ商店"}</span></h1>
                 { self.fetching() }
                 { self.success() }
             </div>

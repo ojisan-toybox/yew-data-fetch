@@ -42,7 +42,7 @@ impl Model {
             Some(ref res) => {
                 html! {
                     <>
-                            {for res.data.iter().map(|e| self.renderItem(e)) }
+                            {for res.data.iter().map(|e| self.render_item(e)) }
                             <p class="sum">{"小計: "}{res.sum}<span>{"円"}</span></p>
                     </>
                 }
@@ -61,15 +61,8 @@ impl Model {
             html! { <p></p> }
         }
     }
-    fn error(&self) -> Html {
-        if let Some(ref error) = self.error {
-            html! { <p>{ error.clone() }</p> }
-        } else {
-            html! {}
-        }
-    }
 
-    fn renderItem(&self, item: &Item) -> Html {
+    fn render_item(&self, item: &Item) -> Html {
         html! {
             <a class="item" href=format!("https://www.mercari.com/jp/search/?keyword={}", &item.item_name) target="_blank">
                   <div class="left">{ &item.item_name }</div>
@@ -82,6 +75,7 @@ impl Component for Model {
     type Message = Msg;
     type Properties = ();
 
+    // コンポーネント作成時に呼ばれるライフサイクルメソッド
     fn create(_props: Self::Properties, link: ComponentLink<Self>) -> Self {
         let request = Request::get(
             "https://receipten-backend.ojisan.vercel.app/api/get-items?id=JtvoNq7CnSUU6HvB1QPK",
@@ -132,7 +126,8 @@ impl Component for Model {
     }
 }
 
+// wasm module からのエントリポイント
 #[wasm_bindgen(start)]
 pub fn run_app() {
-    App::<Model>::new().mount_to_body();
+    App::<Model>::new().mount_to_body(); // til: turbofish
 }

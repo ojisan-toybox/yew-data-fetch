@@ -8,5 +8,7 @@ edition = "2018"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+anyhow = "1.0.38"
+serde = "1.0.123"
 wasm-bindgen = "0.2.69"
 yew = "0.17.4"

@@ -103,7 +103,6 @@ impl Component for Model {
     fn update(&mut self, msg: Self::Message) -> bool {
         match msg {
             Msg::StartFetch => {
-                log::info!("firee!");
                 let request = Request::get(
                     "https://receipten-backend.ojisan.vercel.app/api/get-items?id=JtvoNq7CnSUU6HvB1QPK",
                 )

@@ -4,8 +4,8 @@ use yew::{App, Component, ComponentLink, Html, Properties, format::{Json, Nothin
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct Item {
-    item_name: String,
-    item_price: String,
+    itemName: String,
+    itemPrice: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -58,8 +58,8 @@ impl Model {
     fn render_item(&self, item: &Item) -> Html {
         html! {
             <>
-                  <div class="left">{ &item.item_name }</div>
-                   <div class="right">{ &item.item_price }</div>
+                  <div class="left">{ &item.itemName }</div>
+                   <div class="right">{ &item.itemPrice }</div>
             </>
         }
     }
@@ -80,11 +80,15 @@ impl Component for Model {
         let callback = link.callback(
             |response: Response<Json<Result<ResponseData, anyhow::Error>>>| {
                 let Json(data) = response.into_body();
+
                 match data {
                     Ok(data) => {
                        Msg::SuccessFetch(data)
                     }
-                    Err(_) => Msg::FailFetch,
+                    Err(_) => {
+                        log::info!("{:?}", data);
+                        Msg::FailFetch
+                    },
                 }
             },
         );
@@ -111,7 +115,6 @@ impl Component for Model {
                 self.is_loading = true;
             }
             Msg::SuccessFetch(response) => {
-                log::info!("{:?}", response);
                 self.is_loading = false;
                 self.data = Some(response);
             }

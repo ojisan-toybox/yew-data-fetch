@@ -1,10 +1,6 @@
 use serde::Deserialize;
 use wasm_bindgen::prelude::*;
-use yew::{
-    format::{Json, Nothing},
-    prelude::*,
-    services::fetch::{FetchService, FetchTask, Request, Response},
-};
+use yew::{App, Component, ComponentLink, Html, format::{Json, Nothing}, html,Properties, services::fetch::{FetchService, FetchTask, Request, Response}};
 
 #[derive(Clone, Debug, Eq, PartialEq, Properties)]
 pub struct Props {
@@ -82,13 +78,15 @@ impl Component for Model {
         )
         .body(Nothing)
         .expect("Could not build request.");
-        // 2. construct a callback
+
+        // callbackの組み立て
         let callback = link.callback(
             |response: Response<Json<Result<ResponseData, anyhow::Error>>>| {
                 let Json(data) = response.into_body();
                 Msg::SuccessFetchData(data)
             },
         );
+
         let task = FetchService::fetch(request, callback).expect("failed to start request");
         Self {
             fetch_task: Some(task),
@@ -97,11 +95,15 @@ impl Component for Model {
             error: None,
         }
     }
+
+    // 親の再レンダリングで呼ばれる
     fn change(&mut self, _props: Self::Properties) -> bool {
         false
     }
+
+    // msg が送られるたびに呼ばれる関数
     fn update(&mut self, msg: Self::Message) -> bool {
-        use Msg::*;
+        use Msg::{SuccessFetchData};
 
         match msg {
             SuccessFetchData(response) => {
@@ -116,6 +118,7 @@ impl Component for Model {
             }
         }
     }
+
     fn view(&self) -> Html {
         html! {
             <div class="container">

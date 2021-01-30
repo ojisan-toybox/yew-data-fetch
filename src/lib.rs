@@ -1,6 +1,8 @@
+use std::any;
+use any::Any;
 use serde::Deserialize;
 use wasm_bindgen::prelude::*;
-use yew::{App, Component, ComponentLink, Html, Properties, format::{Json, Nothing}, html, services::fetch::{FetchService, FetchTask, Request, Response}};
+use yew::{App, Component, ComponentLink, Html, format::{Json, Nothing}, html, services::fetch::{FetchService, FetchTask, Request, Response}};
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct Item {
@@ -55,6 +57,12 @@ impl Model {
         }
     }
 
+    fn fail(&self) -> Html {
+        html! {
+            <div>{"fail"}</div>
+        }
+    }
+
     fn render_item(&self, item: &Item) -> Html {
         html! {
             <>
@@ -70,36 +78,19 @@ impl Component for Model {
 
     // コンポーネント作成時に呼ばれるライフサイクルメソッド
     fn create(_props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        let request = Request::get(
-            "https://receipten-backend.ojisan.vercel.app/api/get-items?id=JtvoNq7CnSUU6HvB1QPK",
-        )
-        .body(Nothing)
-        .expect("Could not build request.");
-
-        // callbackの組み立て
-        let callback = link.callback(
-            |response: Response<Json<Result<ResponseData, anyhow::Error>>>| {
-                let Json(data) = response.into_body();
-
-                match data {
-                    Ok(data) => {
-                       Msg::SuccessFetch(data)
-                    }
-                    Err(_) => {
-                        log::info!("{:?}", data);
-                        Msg::FailFetch
-                    },
-                }
-            },
-        );
-        let task = FetchService::fetch(request, callback).expect("failed to start request");
+        link.send_message(Msg::StartFetch);
 
         Self {
-            ft: Some(task),
-            is_loading: false,
+            ft: None,
+            is_loading: true,
             data: None,
             link,
             error: None,
+        }
+    }
+
+    fn rendered(&mut self, first_render: bool) {
+        if first_render {
         }
     }
 
@@ -112,7 +103,32 @@ impl Component for Model {
     fn update(&mut self, msg: Self::Message) -> bool {
         match msg {
             Msg::StartFetch => {
+                log::info!("firee!");
+                let request = Request::get(
+                    "https://receipten-backend.ojisan.vercel.app/api/get-items?id=JtvoNq7CnSUU6HvB1QPK",
+                )
+                .body(Nothing)
+                .expect("Could not build request.");
+        
+                // callbackの組み立て
+                let callback = self.link.callback(
+                    |response: Response<Json<Result<ResponseData, anyhow::Error>>>| {
+                        let Json(data) = response.into_body();
+        
+                        match data {
+                            Ok(data) => {
+                               Msg::SuccessFetch(data)
+                            }
+                            Err(_) => {
+                                log::info!("{:?}", data);
+                                Msg::FailFetch
+                            },
+                        }
+                    },
+                );
+                let task = FetchService::fetch(request, callback).expect("failed to start request");
                 self.is_loading = true;
+                self.ft = Some(task)
             }
             Msg::SuccessFetch(response) => {
                 self.is_loading = false;
@@ -130,16 +146,23 @@ impl Component for Model {
         html! {
             <div class="container">
            {
-            if  self.is_loading {
-                html! {
+               match (self.is_loading, self.data.as_ref(), self.error.as_ref()) {
+                   (true, _, _) => {
                     self.fetching()
-                }
-              } else {
-                html! {
-                    self.success() 
-                }
-              }
+                   }
+                   (false, Some(ResponseData), None) => {
+                    self.success()
+                   }
+                   (false, None, None) => {
+                    self.fail()
+                   }
+                   (_,_,_)=>{
+                    self.fail()
+                   }
+
+               }
            }
+           <button onclick=self.link.callback(|_| Msg::StartFetch)>{"refetch"}</button>
             </div>
         }
     }

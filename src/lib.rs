@@ -21,12 +21,14 @@ pub struct ResponseData {
 
 #[derive(Debug)]
 pub enum Msg {
-    SuccessFetchData(Result<ResponseData, anyhow::Error>),
+    StartFetch,
+    SuccessFetch(ResponseData),
+    FailFetch
 }
 
 #[derive(Debug)]
 pub struct Model {
-    fetch_task: Option<FetchTask>,
+    isLoading: bool,
     data: Option<ResponseData>,
     link: ComponentLink<Self>,
     error: Option<String>,
@@ -50,20 +52,19 @@ impl Model {
             }
         }
     }
+
     fn fetching(&self) -> Html {
-        if self.fetch_task.is_some() {
-            html! { <p>{ "Fetching data..." }</p> }
-        } else {
-            html! { <p></p> }
+        html! {
+            <div>{"fetching"}</div>
         }
     }
 
     fn render_item(&self, item: &Item) -> Html {
         html! {
-            <a class="item" href=format!("https://www.mercari.com/jp/search/?keyword={}", &item.item_name) target="_blank">
+            <>
                   <div class="left">{ &item.item_name }</div>
                    <div class="right">{ &item.item_price }</div>
-            </a>
+            </>
         }
     }
 }
@@ -83,13 +84,18 @@ impl Component for Model {
         let callback = link.callback(
             |response: Response<Json<Result<ResponseData, anyhow::Error>>>| {
                 let Json(data) = response.into_body();
-                Msg::SuccessFetchData(data)
+                match data {
+                    Ok(data) => {
+                       Msg::SuccessFetch(data)
+                    }
+                    Err(error) => Msg::FailFetch,
+                }
             },
         );
 
         let task = FetchService::fetch(request, callback).expect("failed to start request");
         Self {
-            fetch_task: Some(task),
+            isLoading: false,
             data: None,
             link,
             error: None,
@@ -103,25 +109,26 @@ impl Component for Model {
 
     // msg が送られるたびに呼ばれる関数
     fn update(&mut self, msg: Self::Message) -> bool {
-        use Msg::{SuccessFetchData};
-
         match msg {
-            SuccessFetchData(response) => {
-                match response {
-                    Ok(data) => {
-                        self.data = Some(data);
-                    }
-                    Err(error) => self.error = Some(error.to_string()),
-                }
-                self.fetch_task = None;
-                true
+            Msg::StartFetch => {
+                self.isLoading = true;
+            }
+            Msg::SuccessFetch(response) => {
+                self.isLoading = false;
+                self.data = Some(response);
+            }
+            Msg::FailFetch => {
+                self.error = Some("error".to_string());
+                self.isLoading = false;
             }
         }
+        true
     }
 
     fn view(&self) -> Html {
         html! {
             <div class="container">
+{self.fetching()}
                 { self.fetching() }
                 { self.success() }
             </div>

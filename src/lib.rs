@@ -1,6 +1,6 @@
 use serde::Deserialize;
 use wasm_bindgen::prelude::*;
-use yew::{App, Component, ComponentLink, Html, format::{Json, Nothing}, html,Properties, services::fetch::{FetchService, FetchTask, Request, Response}};
+use yew::{App, Component, ComponentLink, Html, format::{Json, Nothing}, html,Properties, services::fetch::{FetchService, Request, Response}};
 
 #[derive(Clone, Debug, Eq, PartialEq, Properties)]
 pub struct Props {
@@ -28,7 +28,7 @@ pub enum Msg {
 
 #[derive(Debug)]
 pub struct Model {
-    isLoading: bool,
+    is_loading: bool,
     data: Option<ResponseData>,
     link: ComponentLink<Self>,
     error: Option<String>,
@@ -88,14 +88,14 @@ impl Component for Model {
                     Ok(data) => {
                        Msg::SuccessFetch(data)
                     }
-                    Err(error) => Msg::FailFetch,
+                    Err(_) => Msg::FailFetch,
                 }
             },
         );
 
-        let task = FetchService::fetch(request, callback).expect("failed to start request");
+        FetchService::fetch(request, callback);
         Self {
-            isLoading: false,
+            is_loading: false,
             data: None,
             link,
             error: None,
@@ -111,15 +111,15 @@ impl Component for Model {
     fn update(&mut self, msg: Self::Message) -> bool {
         match msg {
             Msg::StartFetch => {
-                self.isLoading = true;
+                self.is_loading = true;
             }
             Msg::SuccessFetch(response) => {
-                self.isLoading = false;
+                self.is_loading = false;
                 self.data = Some(response);
             }
             Msg::FailFetch => {
                 self.error = Some("error".to_string());
-                self.isLoading = false;
+                self.is_loading = false;
             }
         }
         true
@@ -128,9 +128,17 @@ impl Component for Model {
     fn view(&self) -> Html {
         html! {
             <div class="container">
-{self.fetching()}
-                { self.fetching() }
-                { self.success() }
+           {
+            if  self.is_loading {
+                html! {
+                    self.fetching()
+                }
+              } else {
+                html! {
+                    self.success() 
+                }
+              }
+           }
             </div>
         }
     }

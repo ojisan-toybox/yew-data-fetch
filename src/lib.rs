@@ -1,11 +1,6 @@
 use serde::Deserialize;
 use wasm_bindgen::prelude::*;
-use yew::{App, Component, ComponentLink, Html, format::{Json, Nothing}, html,Properties, services::fetch::{FetchService, Request, Response}};
-
-#[derive(Clone, Debug, Eq, PartialEq, Properties)]
-pub struct Props {
-    pub id: String,
-}
+use yew::{App, Component, ComponentLink, Html, Properties, format::{Json, Nothing}, html, services::fetch::{FetchService, FetchTask, Request, Response}};
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct Item {
@@ -28,6 +23,7 @@ pub enum Msg {
 
 #[derive(Debug)]
 pub struct Model {
+    ft: Option<FetchTask>,
     is_loading: bool,
     data: Option<ResponseData>,
     link: ComponentLink<Self>,
@@ -47,7 +43,7 @@ impl Model {
             }
             None => {
                 html! {
-                     <></>
+                     <>{"none"}</>
                 }
             }
         }
@@ -92,9 +88,10 @@ impl Component for Model {
                 }
             },
         );
+        let task = FetchService::fetch(request, callback).expect("failed to start request");
 
-        FetchService::fetch(request, callback);
         Self {
+            ft: Some(task),
             is_loading: false,
             data: None,
             link,
@@ -114,6 +111,7 @@ impl Component for Model {
                 self.is_loading = true;
             }
             Msg::SuccessFetch(response) => {
+                log::info!("{:?}", response);
                 self.is_loading = false;
                 self.data = Some(response);
             }
@@ -147,5 +145,6 @@ impl Component for Model {
 // wasm module からのエントリポイント
 #[wasm_bindgen(start)]
 pub fn run_app() {
+    wasm_logger::init(wasm_logger::Config::default());
     App::<Model>::new().mount_to_body(); // til: turbofish
 }

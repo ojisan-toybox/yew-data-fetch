@@ -1,26 +1,25 @@
-use std::any;
 use any::Any;
 use serde::Deserialize;
+use std::any;
 use wasm_bindgen::prelude::*;
-use yew::{App, Component, ComponentLink, Html, format::{Json, Nothing}, html, services::fetch::{FetchService, FetchTask, Request, Response}};
+use yew::{
+    format::{Json, Nothing},
+    html,
+    services::fetch::{FetchService, FetchTask, Request, Response},
+    App, Component, ComponentLink, Html,
+};
 
-#[derive(Deserialize, Debug, Clone)]
-pub struct Item {
-    itemName: String,
-    itemPrice: String,
-}
-
+// 本当はもっとデータが入ってるんだけど。
 #[derive(Deserialize, Debug, Clone)]
 pub struct ResponseData {
-    data: Vec<Item>,
-    sum: i32
+    title: String,
 }
 
 #[derive(Debug)]
 pub enum Msg {
     StartFetch,
     SuccessFetch(ResponseData),
-    FailFetch
+    FailFetch,
 }
 
 #[derive(Debug)]
@@ -38,8 +37,7 @@ impl Model {
             Some(ref res) => {
                 html! {
                     <>
-                            {for res.data.iter().map(|e| self.render_item(e)) }
-                            <p class="sum">{"小計: "}{res.sum}<span>{"円"}</span></p>
+                            <p class="sum">{&res.title}</p>
                     </>
                 }
             }
@@ -62,15 +60,6 @@ impl Model {
             <div>{"fail"}</div>
         }
     }
-
-    fn render_item(&self, item: &Item) -> Html {
-        html! {
-            <>
-                  <div class="left">{ &item.itemName }</div>
-                   <div class="right">{ &item.itemPrice }</div>
-            </>
-        }
-    }
 }
 impl Component for Model {
     type Message = Msg;
@@ -90,8 +79,7 @@ impl Component for Model {
     }
 
     fn rendered(&mut self, first_render: bool) {
-        if first_render {
-        }
+        if first_render {}
     }
 
     // 親の再レンダリングで呼ばれる
@@ -104,24 +92,22 @@ impl Component for Model {
         match msg {
             Msg::StartFetch => {
                 let request = Request::get(
-                    "https://receipten-backend.ojisan.vercel.app/api/get-items?id=JtvoNq7CnSUU6HvB1QPK",
+                    "https://hacker-news.firebaseio.com/v0/item/8863.json?print=pretty",
                 )
                 .body(Nothing)
                 .expect("Could not build request.");
-        
+
                 // callbackの組み立て
                 let callback = self.link.callback(
                     |response: Response<Json<Result<ResponseData, anyhow::Error>>>| {
                         let Json(data) = response.into_body();
-        
+
                         match data {
-                            Ok(data) => {
-                               Msg::SuccessFetch(data)
-                            }
+                            Ok(data) => Msg::SuccessFetch(data),
                             Err(_) => {
                                 log::info!("{:?}", data);
                                 Msg::FailFetch
-                            },
+                            }
                         }
                     },
                 );
